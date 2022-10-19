@@ -32,36 +32,55 @@ namespace firebase_restore
 
             List<DataCollection> data = new List<DataCollection>();
 
+            // Adding root collections data.            
             await foreach(var coll in collections)
             {
-                data.Add(new DataCollection(coll.Id, coll.Path));
+                data.Add(new DataCollection(coll.Id, coll.Id));
             }
 
+            // Adding documents for each collection.
             foreach(DataCollection collection in data)
             {
-                collection.Documents = await GetChildDocuments(collection);
-                
+                collection.Documents = await GetChildData(collection);                
             }
 
+            // Saving data to a file in JSON format.
+            string jsonData = JsonSerializer.Serialize(data);
 
-            string json = JsonSerializer.Serialize(data);
-
-            File.WriteAllText("firestore_backup_" + DateTime.Now.ToShortDateString() + ".json", json);
+            File.WriteAllText("firestore_backup_" + DateTime.Now.ToShortDateString() + ".json", jsonData);
         }
-        private static async Task<List<DataDocument>> GetChildDocuments(DataCollection collection)
-        {
-            QuerySnapshot snapshot = await db.Collection(collection.Id).GetSnapshotAsync();
 
+        // Gets child documents with their subcollections and fields with values.
+        private static async Task<List<DataDocument>> GetChildData(DataCollection collection)
+        {
+            QuerySnapshot snapshot = await db.Collection(collection.Path).GetSnapshotAsync();
+            
             List<DataDocument> documents = new List<DataDocument>();
 
-            foreach (var documentSnapshot in snapshot)
+            foreach (DocumentSnapshot documentSnapshot in snapshot.Documents)
             {
+                // Converting document to a dictionary.
                 Dictionary<string, object> document = documentSnapshot.ToDictionary();
-                DataDocument documentData = new DataDocument(documentSnapshot.Id, documentSnapshot.Reference.Path);
 
+                DataDocument documentData = new DataDocument(documentSnapshot.Id, collection.Path + "/" + documentSnapshot.Id);
+                
+                // Adding each field with value.
                 foreach (var key in document.Keys)
                 {
                     documentData.Fields.Add(key, document[key]);
+                }
+
+                IAsyncEnumerable<CollectionReference> subcollectionsReferences = db.Collection(collection.Path).Document(documentData.Id).ListCollectionsAsync();
+
+                // Adding each subcollection.
+                await foreach(var subcollectionReference in subcollectionsReferences)
+                {
+                    // Create collection.
+                    DataCollection collectionData = new DataCollection(subcollectionReference.Id, documentData.Path + "/" + subcollectionReference.Id);
+                    // Add collection documents and subcollections.
+                    collectionData.Documents = await GetChildData(collectionData);
+                    
+                    documentData.Collections.Add(collectionData);
                 }
 
                 documents.Add(documentData);
@@ -69,39 +88,5 @@ namespace firebase_restore
 
             return documents;
         }
-        private static async Task GetDocumentCollections()
-        {
-            
-        }
-    }
-
-    class DataCollection
-    {
-        public string Id { get; set; }
-        public string Path { get; set; }
-        public List<DataDocument> Documents { get; set; }
-
-        public DataCollection(string id, string path)
-        {
-            Id = id;
-            Path = path;
-            Documents = new List<DataDocument>();
-        }
-    }
-
-    class DataDocument
-    {
-        public string Id { get; set; }
-        public string Path { get; set; }
-        public Dictionary<string, object> Fields { get; set; }
-        public List<DataCollection> Collections { get; set; }
-
-        public DataDocument(string id, string path)
-        {
-            Id = id;
-            Path = path;
-            Fields = new Dictionary<string, object>();
-            Collections = new List<DataCollection>();
-        }
-    }
+    }    
 }
