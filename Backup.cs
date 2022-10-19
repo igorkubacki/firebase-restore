@@ -6,7 +6,7 @@ namespace firebase_restore
     static class Backup
     {
         private static FirestoreDb db;
-        public static async void Start()
+        public static void Start()
         {
             Console.WriteLine();
             Console.WriteLine();
@@ -20,12 +20,23 @@ namespace firebase_restore
 
             Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", path);
 
-            await BackupData(path);
+
+            Console.WriteLine("Backup started...");
+            Console.WriteLine("Collections/documents found: 0/0");
+            Console.SetCursorPosition(0, Console.CursorTop - 1);
+
+            Task task = BackupData(path);
+
+            task.Wait();
+            
+            Console.WriteLine();
+            Console.WriteLine("Done");
         }
 
         private async static Task BackupData(string path)
         {
             db = FirestoreDb.Create("availability-monitor-7231f");
+            // Progress handling.
 
             // Getting all collections ID.
             var collections = db.ListRootCollectionsAsync();
@@ -35,19 +46,20 @@ namespace firebase_restore
             // Adding root collections data.            
             await foreach(var coll in collections)
             {
+                Menu.UpdateCollections();
                 data.Add(new DataCollection(coll.Id, coll.Id));
             }
 
             // Adding documents for each collection.
             foreach(DataCollection collection in data)
             {
-                collection.Documents = await GetChildData(collection);                
+                collection.Documents = await GetChildData(collection);
             }
 
             // Saving data to a file in JSON format.
             string jsonData = JsonSerializer.Serialize(data);
 
-            File.WriteAllText("firestore_backup_" + DateTime.Now.ToShortDateString() + ".json", jsonData);
+            File.WriteAllText(@"Backup\firestore_backup_" + DateTime.Now.ToShortDateString() + ".json", jsonData);
         }
 
         // Gets child documents with their subcollections and fields with values.
@@ -59,6 +71,7 @@ namespace firebase_restore
 
             foreach (DocumentSnapshot documentSnapshot in snapshot.Documents)
             {
+                Menu.UpdateDocuments();
                 // Converting document to a dictionary.
                 Dictionary<string, object> document = documentSnapshot.ToDictionary();
 
@@ -75,6 +88,7 @@ namespace firebase_restore
                 // Adding each subcollection.
                 await foreach(var subcollectionReference in subcollectionsReferences)
                 {
+                    Menu.UpdateCollections();
                     // Create collection.
                     DataCollection collectionData = new DataCollection(subcollectionReference.Id, documentData.Path + "/" + subcollectionReference.Id);
                     // Add collection documents and subcollections.
