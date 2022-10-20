@@ -1,7 +1,10 @@
-﻿namespace firebase_restore
+﻿using Google.Cloud.Firestore;
+
+namespace firebase_restore
 {
-    static class Firebase_Restore
+    static class Program
     {
+        public static FirestoreDb db;
         private static void Main()
         {
             Menu.Show();

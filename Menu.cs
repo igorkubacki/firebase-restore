@@ -4,12 +4,10 @@ namespace firebase_restore
     {
         static int collectionsCount;
         static int documentsCount;
-        static int cursorPosition = 0;
         public static void Show()
         {
             while(true)
             {
-                Console.WriteLine();
                 Console.WriteLine("1. Make a backup.");
                 Console.WriteLine("2. Restore a backup.");
                 Console.WriteLine("3. Exit.");
@@ -31,14 +29,15 @@ namespace firebase_restore
                     Backup.Start();
                     break;
                 case ConsoleKey.D2:
-                    Task.Delay(1000);
+                    collectionsCount = 0;
+                    documentsCount = 0;
+                    Restore.Start();
                     break;
                 case ConsoleKey.D3:
                     Environment.Exit(0);
                     break;
                 default:
-                    Console.WriteLine();
-                    Console.WriteLine("Invalid input, try again.");
+                    Menu.Clear(false);
                     break;
             }
         }
@@ -57,6 +56,17 @@ namespace firebase_restore
 
             Console.SetCursorPosition(0, Console.CursorTop);
             Console.Write("Collections/documents found: " + collectionsCount + "/" + documentsCount);        
+        }
+
+        public static void Clear(bool keyPressNeeded)
+        {
+            if(keyPressNeeded)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Press any key to continue");
+                Console.ReadKey(true);
+            }
+            Console.Clear();
         }
     }
 }

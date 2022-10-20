@@ -5,41 +5,46 @@ namespace firebase_restore
 {
     static class Backup
     {
-        private static FirestoreDb db;
         public static void Start()
         {
             Console.WriteLine();
             Console.WriteLine();
-            Console.WriteLine("Enter the path to your service account key JSON file, then press enter: ");
-            string? path = Console.ReadLine();
 
-            if (string.IsNullOrEmpty(path))
+            if(Program.db == null)
             {
-                return;
+                Console.WriteLine("Enter the path to your service account key JSON file, then press enter: ");
+                string? keyPath = Console.ReadLine();
+
+                while(string.IsNullOrEmpty(keyPath) || !File.Exists(keyPath))
+                {
+                    Console.WriteLine("Please enter a valid path.");
+                    keyPath = Console.ReadLine();
+                }
+
+                Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", keyPath);
+
+                string projectId = GetProjectId(keyPath);
+
+                Program.db = FirestoreDb.Create(projectId);
             }
-
-            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", path);
-
 
             Console.WriteLine("Backup started...");
             Console.WriteLine("Collections/documents found: 0/0");
             Console.SetCursorPosition(0, Console.CursorTop - 1);
 
-            Task task = BackupData(path);
+            Task task = BackupData();
 
             task.Wait();
             
             Console.WriteLine();
-            Console.WriteLine("Done");
+            Console.WriteLine("Done! File saved at: " + Directory.GetCurrentDirectory() + @"Backup\firestore_backup_" + DateTime.Now.ToShortDateString() + ".json");
+            Menu.Clear(true);
         }
 
-        private async static Task BackupData(string path)
+        private async static Task BackupData()
         {
-            db = FirestoreDb.Create("availability-monitor-7231f");
-            // Progress handling.
-
             // Getting all collections ID.
-            var collections = db.ListRootCollectionsAsync();
+            var collections = Program.db.ListRootCollectionsAsync();
 
             List<DataCollection> data = new List<DataCollection>();
 
@@ -59,13 +64,14 @@ namespace firebase_restore
             // Saving data to a file in JSON format.
             string jsonData = JsonSerializer.Serialize(data);
 
-            File.WriteAllText(@"Backup\firestore_backup_" + DateTime.Now.ToShortDateString() + ".json", jsonData);
+            Directory.CreateDirectory(@"\Backup");
+            File.WriteAllText(@"\Backup\firestore_backup_" + DateTime.Now.ToShortDateString() + ".json", jsonData);
         }
 
         // Gets child documents with their subcollections and fields with values.
         private static async Task<List<DataDocument>> GetChildData(DataCollection collection)
         {
-            QuerySnapshot snapshot = await db.Collection(collection.Path).GetSnapshotAsync();
+            QuerySnapshot snapshot = await Program.db.Collection(collection.Path).GetSnapshotAsync();
             
             List<DataDocument> documents = new List<DataDocument>();
 
@@ -83,7 +89,7 @@ namespace firebase_restore
                     documentData.Fields.Add(key, document[key]);
                 }
 
-                IAsyncEnumerable<CollectionReference> subcollectionsReferences = db.Collection(collection.Path).Document(documentData.Id).ListCollectionsAsync();
+                IAsyncEnumerable<CollectionReference> subcollectionsReferences = Program.db.Collection(collection.Path).Document(documentData.Id).ListCollectionsAsync();
 
                 // Adding each subcollection.
                 await foreach(var subcollectionReference in subcollectionsReferences)
@@ -101,6 +107,13 @@ namespace firebase_restore
             }
 
             return documents;
+        }
+
+        private static string GetProjectId(string path)
+        {
+            Dictionary<string, object> keyFile = JsonSerializer.Deserialize<Dictionary<string, object>>(File.ReadAllText(path));
+
+            return keyFile["project_id"].ToString();
         }
     }    
 }
