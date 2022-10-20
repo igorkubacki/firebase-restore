@@ -32,16 +32,14 @@ namespace firebase_restore
             Console.WriteLine("Collections/documents found: 0/0");
             Console.SetCursorPosition(0, Console.CursorTop - 1);
 
-            Task task = BackupData();
-
-            task.Wait();
+            string savePath = BackupData().Result;
             
             Console.WriteLine();
-            Console.WriteLine("Done! File saved at: " + Directory.GetCurrentDirectory() + @"Backup\firestore_backup_" + DateTime.Now.ToShortDateString() + ".json");
+            Console.WriteLine("Done! File saved at: " + savePath);
             Menu.Clear(true);
         }
 
-        private async static Task BackupData()
+        private async static Task<string> BackupData()
         {
             // Getting all collections ID.
             var collections = Program.db.ListRootCollectionsAsync();
@@ -65,7 +63,12 @@ namespace firebase_restore
             string jsonData = JsonSerializer.Serialize(data);
 
             Directory.CreateDirectory(@"\Backup");
-            File.WriteAllText(@"\Backup\firestore_backup_" + DateTime.Now.ToShortDateString() + ".json", jsonData);
+
+            string savePath = @"\Backup\firestore_backup_" + DateTime.Now.ToShortDateString() + ".json";
+
+            File.WriteAllText(savePath, jsonData);
+
+            return savePath;
         }
 
         // Gets child documents with their subcollections and fields with values.
