@@ -41,6 +41,51 @@ namespace firebase_restore
                     break;
             }
         }
+        public static string? SelectFile(string message)
+        {
+            message += " (enter 'r' to return): ";
+
+            Console.WriteLine(message);
+
+            string? path = Console.ReadLine();
+
+            while (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                if (path != null && path.ToLower() == "r") return null;
+                Console.WriteLine("File doesn't exist, try again.");
+                Console.WriteLine();
+                Console.WriteLine(message);
+                path = Console.ReadLine();
+            }
+            Console.WriteLine();
+
+            return path;
+        }
+
+        public static string? SelectDirectory(string message)
+        {
+            message += " (enter 'r' to return): ";
+
+            Console.WriteLine(message);
+
+            string? path = Console.ReadLine();
+
+            while (string.IsNullOrEmpty(path) || !Path.IsPathFullyQualified(path))
+            {
+                if (path != null && path.ToLower() == "r") return null;
+             
+                Console.WriteLine("Please enter a valid direcory.");
+                Console.WriteLine();
+                Console.WriteLine(message);
+                path = Console.ReadLine();
+            }
+
+            Directory.CreateDirectory(path);
+
+            Console.WriteLine();
+
+            return path;
+        }
 
         public static void UpdateCollections()
         {

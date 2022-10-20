@@ -10,25 +10,25 @@ namespace firebase_restore
             Console.WriteLine();
             Console.WriteLine();
 
+            // Create an instance of the Firestore client if not already created.
             if(Program.db == null)
             {
-                Console.WriteLine("Enter the path to your service account key JSON file, then press enter: ");
-                string? keyPath = Console.ReadLine();
-
-                while(string.IsNullOrEmpty(keyPath) || !File.Exists(keyPath))
+                string? keyPath = Menu.SelectFile("Enter the path to your service account key JSON file");
+                if(keyPath == null) 
                 {
-                    Console.WriteLine("Please enter a valid path.");
-                    keyPath = Console.ReadLine();
+                    Menu.Clear(false);
+                    return;
                 }
 
+                string? projectId = GetProjectId(keyPath);
+
+                if(projectId == null) return;
+
                 Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", keyPath);
-
-                string projectId = GetProjectId(keyPath);
-
                 Program.db = FirestoreDb.Create(projectId);
             }
-
-            string? backupFilePath = SelectFile();
+            
+            string? backupFilePath = Menu.SelectFile("Enter the path to your backup JSON file");
 
             if(backupFilePath == null)
             {
@@ -43,24 +43,11 @@ namespace firebase_restore
             Task task = RestoreData(backupFilePath);
             task.Wait();
 
+            Console.WriteLine();
+            Console.WriteLine();
             Console.WriteLine("Done!");
+            Console.WriteLine();
             Menu.Clear(true);
-        }
-
-        private static string? SelectFile()
-        {
-            Console.WriteLine("Enter full path to the backup JSON file (or type 'r' to return): ");
-            
-            string? path = Console.ReadLine();
-
-            while(string.IsNullOrEmpty(path) || !File.Exists(path))
-            {
-                if(path != null && path.ToLower() == "r") return null;
-                Console.WriteLine("Wrong path, try again");
-                path = Console.ReadLine();
-            }
-
-            return path;
         }
 
         private static async Task RestoreData(string filePath)
@@ -101,11 +88,22 @@ namespace firebase_restore
             }
         }
 
-        private static string GetProjectId(string path)
+        private static string? GetProjectId(string path)
         {
-            Dictionary<string, object> keyFile = JsonSerializer.Deserialize<Dictionary<string, object>>(File.ReadAllText(path));
+            try
+            {
+                Dictionary<string, object> keyFile = JsonSerializer.Deserialize<Dictionary<string, object>>(File.ReadAllText(path));
 
-            return keyFile["project_id"].ToString();
+                return keyFile["project_id"].ToString();
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("An exception has occured: " + e.Message);
+                Console.WriteLine("Make sure you entered the right path to the service key file.");
+                Console.WriteLine();
+            }
+            
+            return null;
         }
     }
 }
