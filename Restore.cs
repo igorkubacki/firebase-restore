@@ -1,5 +1,5 @@
 using Google.Cloud.Firestore;
-using System.Text.Json;
+using Newtonsoft.Json;
 
 namespace firebase_restore
 {
@@ -53,9 +53,9 @@ namespace firebase_restore
         private static async Task RestoreData(string filePath)
         {
             // Get the data from the file and deserialize from JSON format.
-            List<DataCollection>? data = JsonSerializer.Deserialize<List<DataCollection>>(File.ReadAllText(filePath));
+            var data = JsonConvert.DeserializeObject<List<DataCollection>>(File.ReadAllText(filePath));
 
-            if(data == null) return;
+            if (data == null) return;
 
             // Restore data for each root collection.
             foreach(DataCollection collection in data)
@@ -73,7 +73,7 @@ namespace firebase_restore
 
                 foreach(var field in document.Fields)
                 {
-                    fields.Add(field.Key, field.Value.ToString());
+                    fields.Add(field.Key, field.Value);
                 }
 
                 await Program.db.Document(document.Path).SetAsync(fields);
@@ -92,7 +92,7 @@ namespace firebase_restore
         {
             try
             {
-                Dictionary<string, object> keyFile = JsonSerializer.Deserialize<Dictionary<string, object>>(File.ReadAllText(path));
+                var keyFile = JsonConvert.DeserializeObject<Dictionary<string, object>>(File.ReadAllText(path));
 
                 return keyFile["project_id"].ToString();
             }

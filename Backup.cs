@@ -95,9 +95,9 @@ namespace firebase_restore
                 DataDocument documentData = new DataDocument(documentSnapshot.Id, collection.Path + "/" + documentSnapshot.Id);
                 
                 // Adding each field with value.
-                foreach (var key in document.Keys)
+                foreach (var entry in document)
                 {
-                    documentData.Fields.Add(key, document[key]);
+                    documentData.Fields.Add(entry.Key, entry.Value);
                 }
 
                 IAsyncEnumerable<CollectionReference> subcollectionsReferences = Program.db.Collection(collection.Path).Document(documentData.Id).ListCollectionsAsync();
