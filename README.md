@@ -1,7 +1,3 @@
-## List of contents
-* [General info](#general-info)
-* 
-
 ## General info
 
 The app was created to save data from Firestore Database to a JSON file and restore the data to the database when needed.
