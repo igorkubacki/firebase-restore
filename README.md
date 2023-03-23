@@ -4,9 +4,9 @@ The app was created to save data from Firestore Database to a JSON file and rest
 
 ## How it works
 
-* First, you need to get a service account JSON key file from Google. Here is how to do it: 
+* First, you need to get a service account JSON key file from Google.
 * Also check if your usage is not already exceeded.
 * Then launch the app and: 
-  * Select interesting option
+  * Select desired option
   * Enter the path
   * Watch progress
